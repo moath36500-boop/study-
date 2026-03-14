@@ -14,42 +14,257 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { 
-            font-family: 'Tajawal', sans-serif; 
-            background-color: #f1f5f9; 
-            color: #1e293b; 
-            user-select: none; 
-            -webkit-user-select: none;
-            -webkit-tap-highlight-color: transparent; 
-            touch-action: manipulation;
-        }
-        
-        /* تحسين الأزرار للاستجابة الفورية */
-        .action-btn, .nav-link, .reset-btn {
-            touch-action: manipulation;
-            -webkit-touch-callout: none;
-            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-
-        .action-btn:active {
-            transform: scale(0.92);
-            opacity: 0.8;
-        }
-
+        body { font-family: 'Tajawal', sans-serif; background-color: #f1f5f9; color: #1e293b; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
         .tablet-container { display: grid; grid-template-columns: 280px 1fr; height: 100vh; }
         .sidebar { background: white; border-left: 1px solid #e2e8f0; display: flex; flex-direction: column; padding: 1.5rem 1rem; z-index: 50; }
         .content-area { overflow-y: auto; padding: 2.5rem; background: #f8fafc; }
         .font-luxury { font-weight: 900; letter-spacing: -0.5px; }
         
-        .target-card { 
-            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); 
-            border-radius: 2rem; padding: 1.5rem; color: white; 
-            position: relative; overflow: hidden; 
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); 
-        }
+        .ai-box { background: #0f172a; border-radius: 1.5rem; padding: 1.2rem; color: white; margin-bottom: 1.2rem; border: 1px solid rgba(255,255,255,0.1); }
+        .subject-page { display: none; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; }
+        .subject-page.active { display: grid; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .study-slider { -webkit-appearance: none; width: 100%; height: 10px; border-radius: 10px; background: #e2e8f0; outline: none; transition: 0.3s; }
+        .study-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .study-slider:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .nav-link { display: flex; align-items: center; gap: 1rem; padding: 0.8rem 1.2rem; border-radius: 1.2rem; color: #64748b; font-weight: 800; margin-bottom: 0.3rem; transition: 0.2s; }
+        .nav-link.active.math { background: #eff6ff; color: #2563eb; }
+        .nav-link.active.physics { background: #fffbeb; color: #d97706; }
+        .nav-link.active.chem { background: #fff7ed; color: #ea580c; }
+        .nav-link.active.bio { background: #f0fdf4; color: #16a34a; }
         
-        .calendar-bg-icon { position: absolute; left: -10px; bottom: -20px; width: 120px; height: 120px; opacity: 0.15; transform: rotate(-15deg); color: white; pointer-events: none; }
+        .day-card { background: white; border-radius: 2rem; padding: 1.5rem; border: 1px solid #e2e8f0; transition: 0.3s; }
+        .day-card.completed { border-color: #10b981; background: #f0fdf4; }
+        .day-card.is-locked { opacity: 0.7; filter: grayscale(0.5); }
+
+        .date-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 20; }
+        .target-card { background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); border-radius: 2rem; padding: 1.5rem; color: white; position: relative; overflow: hidden; }
+        
+        .mini-lock { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .mini-lock.active { background: #fee2e2; color: #ef4444; }
+        .mini-lock.inactive { background: #f1f5f9; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+    <div class="tablet-container">
+        <aside class="sidebar">
+            <div class="flex items-center gap-3 px-4 mb-6">
+                <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg"><i data-lucide="zap" class="text-white w-6 h-6 fill-current"></i></div>
+                <h1 class="text-xl font-luxury text-slate-800">إنجاز <span class="text-indigo-600">35</span></h1>
+            </div>
+
+            <div class="mb-5 p-5 bg-slate-900 rounded-[2rem] text-white text-center">
+                <p class="text-[9px] font-black opacity-40 uppercase mb-1">الإنجاز الإجمالي</p>
+                <div class="flex items-center justify-center gap-2">
+                    <span id="total-done-pages" class="text-4xl font-luxury italic">0</span>
+                    <div class="text-right">
+                        <p class="text-[10px] opacity-40 font-bold">/ 338 ص</p>
+                        <p id="total-pct-label" class="text-indigo-400 text-[11px] font-black">0%</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ai-container" class="ai-box">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
+                    <span class="text-[9px] font-black uppercase text-indigo-400">المساعد الذكي</span>
+                </div>
+                <p id="ai-message" class="text-[10px] font-bold leading-relaxed opacity-90">جاري تحليل بياناتك..</p>
+            </div>
+
+            <nav class="flex-1 px-1 overflow-y-auto">
+                <button onclick="handleTab('math')" id="b-math" class="nav-link active math w-full text-right"><i data-lucide="layout-grid"></i><span>الرياضيات</span></button>
+                <button onclick="handleTab('physics')" id="b-physics" class="nav-link physics w-full text-right"><i data-lucide="zap"></i><span>الفيزياء</span></button>
+                <button onclick="handleTab('chem')" id="b-chem" class="nav-link chem w-full text-right"><i data-lucide="beaker"></i><span>الكيمياء</span></button>
+                <button onclick="handleTab('bio')" id="b-bio" class="nav-link bio w-full text-right"><i data-lucide="dna"></i><span>الأحياء</span></button>
+            </nav>
+
+            <div class="mt-auto space-y-2 pt-4 border-t">
+                <div class="relative bg-orange-50 p-2 rounded-xl border border-orange-100 text-center">
+                    <input type="date" id="exam1-date" onchange="updateUI()" class="date-input">
+                    <p class="text-[8px] font-black text-orange-400 uppercase">الاختبار 1</p>
+                    <p id="cd1" class="text-lg font-luxury text-orange-600">--</p>
+                </div>
+                <div class="relative bg-blue-50 p-2 rounded-xl border border-blue-100 text-center">
+                    <input type="date" id="exam2-date" onchange="updateUI()" class="date-input">
+                    <p class="text-[8px] font-black text-blue-400 uppercase">الاختبار 2</p>
+                    <p id="cd2" class="text-lg font-luxury text-blue-600">--</p>
+                </div>
+                <button onclick="resetData()" class="text-rose-400 text-[10px] font-bold w-full py-2">تصفير البيانات</button>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <div class="grid grid-cols-3 gap-6 mb-10">
+                <div class="target-card text-right">
+                    <input type="date" id="target-finish" onchange="updateUI()" class="date-input">
+                    <span class="text-[10px] font-black uppercase opacity-60">هدف الختم</span>
+                    <p id="target-display" class="text-2xl font-luxury italic">--</p>
+                </div>
+                <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-200 text-right">
+                    <span class="text-[10px] font-black text-slate-400 uppercase">الحالة الراهنة</span>
+                    <p id="status-title" class="text-xl font-luxury text-slate-400 italic">--</p>
+                </div>
+                <div class="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-200 text-right">
+                    <span class="text-[10px] font-black text-slate-400 uppercase">أيام الأمان</span>
+                    <div class="flex justify-between mt-3">
+                        <div class="text-center flex-1 border-l"><p id="safety-1" class="text-2xl font-luxury text-slate-300">--</p></div>
+                        <div class="text-center flex-1"><p id="safety-2" class="text-2xl font-luxury text-slate-300">--</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="p-math" class="subject-page active"></div>
+            <div id="p-physics" class="subject-page"></div>
+            <div id="p-chem" class="subject-page"></div>
+            <div id="p-bio" class="subject-page"></div>
+        </main>
+    </div>
+
+    <script>
+        const plan = {
+            math: { start: 1, color: '#2563eb', ranges: ["92-99", "100-107", "108-115", "116-123", "124-131", "132-139", "140-147", "148-155", "156-163", "164-171", "172-177"] },
+            physics: { start: 12, color: '#d97706', ranges: ["8-17", "18-27", "28-37", "38-47", "48-57", "58-67", "68-77", "78-89"] },
+            chem: { start: 20, color: '#ea580c', ranges: ["180-189", "190-199", "200-209", "210-219", "220-229", "230-239", "240-250", "251-262"] },
+            bio: { start: 28, color: '#16a34a', ranges: ["266-276", "277-287", "288-298", "299-309", "310-320", "321-331", "332-342", "343-352"] }
+        };
+
+        let storage = JSON.parse(localStorage.getItem('study_v35_final_v3')) || { prog: {}, locks: {}, targetDate: '', exam1Date: '', exam2Date: '' };
+        
+        function getPages(rng) { const p = rng.split('-'); return parseInt(p[1]) - parseInt(p[0]) + 1; }
+
+        function init() {
+            document.getElementById('target-finish').value = storage.targetDate || '';
+            document.getElementById('exam1-date').value = storage.exam1Date || '';
+            document.getElementById('exam2-date').value = storage.exam2Date || '';
+
+            Object.keys(plan).forEach(sub => {
+                const container = document.getElementById(`p-${sub}`);
+                container.innerHTML = '';
+                plan[sub].ranges.forEach((rng, i) => {
+                    const dId = plan[sub].start + i;
+                    const total = getPages(rng);
+                    const cur = storage.prog[dId] || 0;
+                    const isLocked = storage.locks[dId] || false;
+                    
+                    container.innerHTML += `
+                        <div class="day-card ${cur >= total ? 'completed' : ''} ${isLocked ? 'is-locked' : ''}" id="card-${dId}">
+                            <div class="flex justify-between items-center mb-4">
+                                <button onclick="toggleCardLock(${dId})" class="mini-lock ${isLocked ? 'active' : 'inactive'}" id="lock-${dId}">
+                                    <i data-lucide="${isLocked ? 'lock' : 'unlock'}" class="w-4 h-4"></i>
+                                </button>
+                                <div class="text-right">
+                                    <p class="text-lg font-luxury text-slate-800">صـ ${rng}</p>
+                                    <p class="text-[10px] font-bold text-slate-400 italic">يوم ${dId} • <span id="count-${dId}">${cur}</span>/${total}</p>
+                                </div>
+                            </div>
+                            <input type="range" min="0" max="${total}" value="${cur}" 
+                                class="study-slider" id="slider-${dId}" 
+                                oninput="syncVal(${dId}, this.value, ${total})"
+                                ${isLocked ? 'disabled' : ''}
+                                style="--accent: ${plan[sub].color}">
+                        </div>`;
+                });
+            });
+            updateUI();
+            lucide.createIcons();
+        }
+
+        function syncVal(id, val, total) {
+            val = parseInt(val);
+            storage.prog[id] = val;
+            document.getElementById(`count-${id}`).innerText = val;
+            const card = document.getElementById(`card-${id}`);
+            if (val >= total) card.classList.add('completed'); else card.classList.remove('completed');
+            updateUI();
+        }
+
+        function toggleCardLock(id) {
+            storage.locks[id] = !storage.locks[id];
+            const isLocked = storage.locks[id];
+            const btn = document.getElementById(`lock-${id}`);
+            const slider = document.getElementById(`slider-${id}`);
+            const card = document.getElementById(`card-${id}`);
+            
+            btn.className = `mini-lock ${isLocked ? 'active' : 'inactive'}`;
+            btn.innerHTML = `<i data-lucide="${isLocked ? 'lock' : 'unlock'}" class="w-4 h-4"></i>`;
+            slider.disabled = isLocked;
+            isLocked ? card.classList.add('is-locked') : card.classList.remove('is-locked');
+            
+            lucide.createIcons();
+            localStorage.setItem('study_v35_final_v3', JSON.stringify(storage));
+        }
+
+        function handleTab(s) {
+            document.querySelectorAll('.subject-page, .nav-link').forEach(el => el.classList.remove('active'));
+            document.getElementById(`p-${s}`).classList.add('active');
+            document.getElementById(`b-${s}`).classList.add('active');
+        }
+
+        function updateUI() {
+            let totalDone = 0, daysRemaining = 0;
+            Object.keys(plan).forEach(sub => {
+                plan[sub].ranges.forEach((rng, i) => {
+                    const dId = plan[sub].start + i;
+                    const val = storage.prog[dId] || 0;
+                    totalDone += val;
+                    if (val < getPages(rng)) daysRemaining++;
+                });
+            });
+
+            document.getElementById('total-done-pages').innerText = totalDone;
+            document.getElementById('total-pct-label').innerText = Math.round((totalDone / 338) * 100) + '%';
+            
+            storage.targetDate = document.getElementById('target-finish').value;
+            storage.exam1Date = document.getElementById('exam1-date').value;
+            storage.exam2Date = document.getElementById('exam2-date').value;
+
+            const now = new Date(); now.setHours(0,0,0,0);
+            const estFinish = new Date(now); estFinish.setDate(now.getDate() + daysRemaining);
+
+            const aiMsg = document.getElementById('ai-message');
+            if (storage.targetDate) {
+                const diffT = Math.ceil((new Date(storage.targetDate) - estFinish) / 864e5);
+                const st = document.getElementById('status-title');
+                st.innerText = diffT >= 0 ? `سابق بـ ${diffT} يوم` : `متأخر بـ ${Math.abs(diffT)} يوم`;
+                st.className = `text-xl font-luxury italic ${diffT >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+                
+                if (diffT > 0) aiMsg.innerText = "أنت بطل! استمر على هذا المنوال لتسبق جدولك أكثر.";
+                else if (diffT < 0) aiMsg.innerText = "انتبه! أنت متأخر قليلاً، حاول زيادة وتيرة المذاكرة اليوم.";
+                else aiMsg.innerText = "أنت تسير تماماً حسب الخطة، حافظ على انضباطك.";
+            } else {
+                aiMsg.innerText = "حدد هدف الختم لأقوم بتحليل خطتك بشكل أدق.";
+            }
+
+            const updateField = (id, date, baseDate) => {
+                const el = document.getElementById(id);
+                if(!date) { el.innerText = '--'; return; }
+                const diff = Math.ceil((new Date(date) - baseDate) / 864e5);
+                el.innerText = Math.max(0, diff) + (id.startsWith('cd') ? " يوم" : "");
+                if(!id.startsWith('cd')) el.className = `text-2xl font-luxury ${diff > 0 ? 'text-emerald-500' : 'text-rose-500'}`;
+            };
+
+            updateField('cd1', storage.exam1Date, now);
+            updateField('cd2', storage.exam2Date, now);
+            updateField('safety-1', storage.exam1Date, estFinish);
+            updateField('safety-2', storage.exam2Date, estFinish);
+
+            if (storage.targetDate) {
+                document.getElementById('target-display').innerText = new Date(storage.targetDate).toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+            }
+
+            localStorage.setItem('study_v35_final_v3', JSON.stringify(storage));
+        }
+
+        function resetData() { if (confirm('تصفير كل شيء؟')) { localStorage.clear(); location.reload(); } }
+
+        init();
+    </script>
+</body>
+</html>
         
         .subject-page { display: none; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
         .subject-page.active { display: grid; animation: slideUp 0.3s ease-out; }
