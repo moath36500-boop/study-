@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>إنجاز ⚡</title>
-
+<link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/785/785116.png">
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/785/785116.png">
 
@@ -262,6 +262,15 @@
         function resetData() { if (confirm('تصفير كل شيء؟')) { localStorage.clear(); location.reload(); } }
 
         init();
+    </script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker Registered!'))
+        .catch(err => console.log('Service Worker Failed', err));
+    });
+  }
     </script>
 </body>
 </html>
