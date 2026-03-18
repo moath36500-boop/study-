@@ -227,7 +227,7 @@
 
             const aiMsg = document.getElementById('ai-message');
             if (storage.targetDate) {
-                const diffT = Math.ceil((new Date(storage.targetDate) - estFinish) / 864e5);
+                const diffT = Math.round((new Date(storage.targetDate) - estFinish) / 864e5);;
                 const st = document.getElementById('status-title');
                 st.innerText = diffT >= 0 ? `سابق بـ ${diffT} يوم` : `متأخر بـ ${Math.abs(diffT)} يوم`;
                 st.className = `text-xl font-luxury italic ${diffT >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
@@ -242,7 +242,7 @@
             const updateField = (id, date, baseDate) => {
                 const el = document.getElementById(id);
                 if(!date) { el.innerText = '--'; return; }
-                const diff = Math.ceil((new Date(date) - baseDate) / 864e5);
+                const diff = Math.round((new Date(date) - baseDate) / 864e5);
                 el.innerText = Math.max(0, diff) + (id.startsWith('cd') ? " يوم" : "");
                 if(!id.startsWith('cd')) el.className = `text-2xl font-luxury ${diff > 0 ? 'text-emerald-500' : 'text-rose-500'}`;
             };
